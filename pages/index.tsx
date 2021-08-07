@@ -1,10 +1,18 @@
 import { useEffect } from "react";
-import play from "../playgorund";
+import type { InferGetStaticPropsType } from "next";
+import getAllProducts from "../framework/shopify/product/get-all-products";
 
-export default function Home() {
-  useEffect(() => {
-    play();
-  }, []);
-  const message: string = "Hello world";
-  return <div>{message}</div>;
+export async function getStaticProps() {
+  const products = await getAllProducts();
+
+  return {
+    props: { products },
+    revalidate: 4 * 60 * 60,
+  };
+}
+
+export default function Home({
+  products,
+}: InferGetStaticPropsType<typeof getStaticProps>) {
+  return <div>{JSON.stringify(products)}</div>;
 }
