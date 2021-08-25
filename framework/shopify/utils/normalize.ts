@@ -1,6 +1,13 @@
-import { Product as ShopifyProduct, ImageEdge, MoneyV2 } from "../schema";
+import {
+  ImageEdge,
+  MoneyV2,
+  Product as ShopifyProduct,
+  ProductOption,
+  ProductVariantConnection,
+  SelectedOption,
+} from "../schema";
 
-import { Product, Productprice } from "@common/types/product";
+import { Product } from "@common/types/product";
 
 const normalizeProductImages = ({ edges }: { edges: Array<ImageEdge> }) =>
   edges.map(({ node: { originalSrc: url, ...rest } }) => ({
@@ -8,10 +15,61 @@ const normalizeProductImages = ({ edges }: { edges: Array<ImageEdge> }) =>
     ...rest,
   }));
 
-const normalizeProductPrice = ({ currencyCode, amount }: MoneyV2):Productprice => ({
+const normalizeProductPrice = ({ currencyCode, amount }: MoneyV2) => ({
   value: +amount,
   currencyCode,
 });
+
+const normalizeProductOption = ({
+  id,
+  values,
+  name: displayName,
+}: ProductOption) => {
+  const normalized = {
+    id,
+    displayName,
+    values: values.map((value) => {
+      let output: any = {
+        label: value,
+      };
+
+      if (displayName.match(/colou?r/gi)) {
+        output = {
+          ...output,
+          hexColor: value,
+        };
+      }
+
+      return output;
+    }),
+  };
+
+  return normalized;
+};
+
+const normalizeProductVariants = ({ edges }: ProductVariantConnection) => {
+  return edges.map(({ node }) => {
+    const { id, selectedOptions, sku, title, priceV2, compareAtPriceV2 } = node;
+
+    return {
+      id,
+      name: title,
+      sku: sku || id,
+      price: +priceV2.amount,
+      listPrice: +compareAtPriceV2?.amount,
+      requiresShipping: true,
+      options: selectedOptions.map(({ name, value }: SelectedOption) => {
+        const option = normalizeProductOption({
+          id,
+          name,
+          values: [value],
+        });
+
+        return option;
+      }),
+    };
+  });
+};
 
 export function normalizeProduct(productNode: ShopifyProduct): Product {
   const {
@@ -22,6 +80,8 @@ export function normalizeProduct(productNode: ShopifyProduct): Product {
     description,
     images: imageConnection,
     priceRange,
+    options,
+    variants,
     ...rest
   } = productNode;
 
@@ -34,6 +94,12 @@ export function normalizeProduct(productNode: ShopifyProduct): Product {
     slug: handle.replace(/^\/+|\/+$/g, ""),
     images: normalizeProductImages(imageConnection),
     price: normalizeProductPrice(priceRange.minVariantPrice),
+    options: options
+      ? options
+          .filter((o) => o.name !== "Title")
+          .map((o) => normalizeProductOption(o))
+      : [],
+    variants: variants ? normalizeProductVariants(variants) : [],
     ...rest,
   };
 
