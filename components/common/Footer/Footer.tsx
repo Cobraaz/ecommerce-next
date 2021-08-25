@@ -1,3 +1,5 @@
+
+
 export const Footer = () => {
   return (
     <footer className="bg-black pt-1">
@@ -5,13 +7,13 @@ export const Footer = () => {
         <div className="mt-5 flex flex-col items-center">
           <div className="py-6">
             <p className="mb-6 text-sm text-primary-2 font-bold">
-              © {new Date().getFullYear()} Cobraaz
+                © {new Date().getFullYear()} Eincode
             </p>
           </div>
         </div>
       </div>
     </footer>
-  );
-};
+  )
+}
 
-export default Footer;
+export default Footer

@@ -1,55 +1,58 @@
+
 import {
   ImageEdge,
   MoneyV2,
   Product as ShopifyProduct,
   ProductOption,
   ProductVariantConnection,
-  SelectedOption,
-} from "../schema";
+  SelectedOption
+} from "../schema"
 
-import { Product } from "@common/types/product";
+import { Product } from "@common/types/product"
 
-const normalizeProductImages = ({ edges }: { edges: Array<ImageEdge> }) =>
-  edges.map(({ node: { originalSrc: url, ...rest } }) => ({
-    url: `/images/${url}`,
-    ...rest,
-  }));
+const normalizeProductImages = ({edges}: {edges: Array<ImageEdge>}) =>
+  edges.map(({node: { originalSrc: url, ...rest}}) => ({
+      url: `/images/${url}`,
+      ...rest }
+  ))
 
-const normalizeProductPrice = ({ currencyCode, amount }: MoneyV2) => ({
+const normalizeProductPrice = ({currencyCode, amount}: MoneyV2) => ({
   value: +amount,
-  currencyCode,
-});
+  currencyCode
+})
 
 const normalizeProductOption = ({
   id,
   values,
-  name: displayName,
+  name: displayName
 }: ProductOption) => {
+
   const normalized = {
     id,
     displayName,
-    values: values.map((value) => {
+    values: values.map(value => {
       let output: any = {
-        label: value,
-      };
+        label: value
+      }
 
       if (displayName.match(/colou?r/gi)) {
         output = {
           ...output,
-          hexColor: value,
-        };
+          hexColor: value
+        }
       }
 
-      return output;
-    }),
-  };
+      return output
+    })
+  }
 
-  return normalized;
-};
+  return normalized
+}
 
 const normalizeProductVariants = ({ edges }: ProductVariantConnection) => {
-  return edges.map(({ node }) => {
-    const { id, selectedOptions, sku, title, priceV2, compareAtPriceV2 } = node;
+
+  return edges.map(({node}) => {
+    const { id, selectedOptions, sku, title, priceV2, compareAtPriceV2} = node
 
     return {
       id,
@@ -58,18 +61,18 @@ const normalizeProductVariants = ({ edges }: ProductVariantConnection) => {
       price: +priceV2.amount,
       listPrice: +compareAtPriceV2?.amount,
       requiresShipping: true,
-      options: selectedOptions.map(({ name, value }: SelectedOption) => {
+      options: selectedOptions.map(({name, value}: SelectedOption) => {
         const option = normalizeProductOption({
           id,
           name,
-          values: [value],
-        });
+          values: [value]
+        })
 
-        return option;
-      }),
-    };
-  });
-};
+        return option
+      })
+    }
+  })
+}
 
 export function normalizeProduct(productNode: ShopifyProduct): Product {
   const {
@@ -83,7 +86,7 @@ export function normalizeProduct(productNode: ShopifyProduct): Product {
     options,
     variants,
     ...rest
-  } = productNode;
+  } = productNode
 
   const product = {
     id,
@@ -94,14 +97,13 @@ export function normalizeProduct(productNode: ShopifyProduct): Product {
     slug: handle.replace(/^\/+|\/+$/g, ""),
     images: normalizeProductImages(imageConnection),
     price: normalizeProductPrice(priceRange.minVariantPrice),
-    options: options
-      ? options
-          .filter((o) => o.name !== "Title")
-          .map((o) => normalizeProductOption(o))
-      : [],
-    variants: variants ? normalizeProductVariants(variants) : [],
-    ...rest,
-  };
+    options: options ?
+      options.filter(o => o.name !== "Title")
+             .map(o => normalizeProductOption(o)) : [],
+    variants: variants ?
+      normalizeProductVariants(variants) : [],
+    ...rest
+  }
 
-  return product;
+  return product
 }
